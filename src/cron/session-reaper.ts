@@ -73,13 +73,26 @@ export async function sweepCronRunSessions(params: {
   let transcriptCleanupError: unknown;
   try {
     const cutoff = now - retentionMs;
+    // A run-scoped key (agent:...:cron:<job>:run:<id>) can be a bare alias for
+    // the still-live stable cron session (same sessionId), not just a
+    // genuinely orphaned per-run session. Reaping it on the stable key's own
+    // schedule would silently re-break the "open historical run" Open Chat
+    // link (#101546). Skip cron-run entries whose sessionId is still
+    // referenced by a non-run (stable) key.
+    const allEntries = listSessionEntries({ storePath, clone: false });
+    const liveSessionIds = new Set(
+      allEntries
+        .filter(({ sessionKey }) => !isCronRunSessionKey(sessionKey))
+        .map(({ entry }) => entry.sessionId)
+        .filter((sessionId): sessionId is string => Boolean(sessionId)),
+    );
     const removals: SessionEntryLifecycleRemoval[] = [];
-    for (const { sessionKey, entry } of listSessionEntries({ storePath, clone: false })) {
+    for (const { sessionKey, entry } of allEntries) {
       if (!isCronRunSessionKey(sessionKey)) {
         continue;
       }
       const updatedAt = entry.updatedAt ?? 0;
-      if (updatedAt < cutoff) {
+      if (updatedAt < cutoff && !(entry.sessionId && liveSessionIds.has(entry.sessionId))) {
         removals.push({
           sessionKey,
           expectedEntry: entry,
