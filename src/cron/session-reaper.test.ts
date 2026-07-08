@@ -137,6 +137,31 @@ describe("sweepCronRunSessions", () => {
     });
   });
 
+  it("keeps an expired run-key alias that still points at a live stable-key sessionId", async () => {
+    const now = Date.now();
+    const store: Record<string, { sessionId: string; updatedAt: number }> = {
+      "agent:main:cron:job1": {
+        sessionId: "shared-session",
+        updatedAt: now,
+      },
+      "agent:main:cron:job1:run:old-run": {
+        sessionId: "shared-session", // alias: same session as the stable key above
+        updatedAt: now - 25 * 3_600_000, // 25h ago — expired on its own, but aliased
+      },
+    };
+    fs.writeFileSync(storePath, JSON.stringify(store));
+
+    const result = await sweepCronRunSessions({
+      sessionStorePath: storePath,
+      nowMs: now,
+      log,
+      force: true,
+    });
+
+    expect(result.pruned).toBe(0);
+    expect(JSON.parse(fs.readFileSync(storePath, "utf-8"))).toEqual(store);
+  });
+
   it("archives transcript files for pruned run sessions that are no longer referenced", async () => {
     const now = Date.now();
     const runSessionId = "old-run";
