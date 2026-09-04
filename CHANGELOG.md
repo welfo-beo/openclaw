@@ -207,6 +207,7 @@ Docs: https://docs.openclaw.ai
 - **Bedrock Mantle discovery:** bound model-catalog fetch time and response size, and release rejected response bodies so stalled, oversized, or failed provider responses fall back safely. (#99961) Thanks @zhangguiping-xydt.
 - **Discord thread-title prompts:** truncate generated-title message and channel context on UTF-16 boundaries so emoji cannot leave malformed model prompt text. (#101551) Thanks @Alix-007.
 - **Task state migration:** canonicalize legacy `not-requested` delivery statuses during sidecar import and existing shared-database open so upgraded task registries and linked TaskFlows recover without manual SQL, and surface rejected persisted values in compact console diagnostics. (#103946) Thanks @bek91.
+- **Task board empty state:** scope the `/tasks` empty-session wording to task runs so an open owner-bound managed TaskFlow no longer reads as a false "all clear". (#127809)
 
 ## 2026.8.2
 
